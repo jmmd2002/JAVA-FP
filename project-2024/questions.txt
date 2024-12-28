@@ -1,0 +1,8 @@
+We neglect derivatives of mean motion when taking info from txt and computing orbits
+	- values are very very small
+	- API updates .txt regularly 
+	
+Talk about limitations regarding data format of the .txt file, in particular time and the way years are represented
+
+
+Verificar como e que os dias estao formatados no txt. Dia 1 corresponde a 24  1?
