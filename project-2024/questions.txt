@@ -6,3 +6,11 @@ Talk about limitations regarding data format of the .txt file, in particular tim
 
 
 Verificar como e que os dias estao formatados no txt. Dia 1 corresponde a 24  1?
+
+getEssentialParameters - is there a better way to do it - more compact?
+
+How to change new AbsoluteDate to time data was sampled when creating kleperian orbit
+
+Use .frominstant (or smth like that) on getDateUTC to be more efficient maybe
+
+make TAI Offset automati on getDAteUTC

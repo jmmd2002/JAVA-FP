@@ -146,13 +146,19 @@ public class TheWonderfulTeachersOrbitViewer extends ApplicationTemplate {
 		 */
 		public AppFrame() throws PatriusException {
 			super(true, true, false);
-
+			
+			ObjectGatherer orbitsData = new ObjectGatherer("objectdata.txt");
+			
 			RenderableLayer layer = new RenderableLayer();
-			for (int i = 0; i < 5; i++) {
-				Orbit theOrbit = new KeplerianOrbit(
-						Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 2000e3, 
-						0.01, 0.2*i, 0, 0.1*i,
-						0, PositionAngle.MEAN, FramesFactory.getGCRF(), new AbsoluteDate(), Constants.WGS84_EARTH_MU);
+			for (int k = 0; k < 100; k++) {
+				
+				//get parameters necessary to create the orbit for object k
+				double[] par = orbitsData.allObjects.get(k).getEssentialParameters(); //i, ra, e, argper, theta, n
+				double a = orbitsData.allObjects.get(k).getSemiMajorAxis(); 
+				//create orbit for object of index k
+				Orbit theOrbit = new KeplerianOrbit(a, par[2], par[0], par[3], par[1], par[4],
+													   PositionAngle.MEAN,FramesFactory.getGCRF(),
+													   new AbsoluteDate(),Constants.WGS84_EARTH_MU); 
 
 				List<GeodeticPoint> points = propagateMyWonderfulOrbit(theOrbit);
 				List<Position> positions = glueBetweenPatriusAndWorldwind(points);
