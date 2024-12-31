@@ -1,0 +1,18 @@
+A.1 - Add space objects as moving dots
+	- Account for rotation of the Earth
+	- Put different colours on different types of space objects (satellites, debris, etc...)
+	
+
+A.2 - Make orbits appear only when respective space object is selected
+	- Make orbits appear on the full globe
+	- Add respective space object's colour to orbit's colour
+	- This is only where we compute the respective orbit points.
+	
+A.3 - Create a filter to make only certain groups of space objects appear
+	
+Y.1 - Add exceptions and respective handlers
+
+Z.1 - Make the user manual
+
+
+Easter eggs?

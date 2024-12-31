@@ -128,17 +128,6 @@ public class ObjectGatherer {
 		
 		int year = Integer.parseInt(date.substring(0, 2)) + 2000; //year starting from 2000
 		double rest = Double.parseDouble(date.substring(2)); //days in raw format
-		double TAIOffsetDays = 37/60/60/24; //adjust offset because of TAI in days; TBD - make offset automatic with a .txt or something
-		rest = rest - TAIOffsetDays;
-		//adjust year if offset sends us before 1 January and take leap years into account
-		if (rest < 0) {
-			year = year - 1;
-			if (Year.of(year).isLeap()) {
-				rest = 366 + rest;
-			} else {
-				rest = 365 + rest;
-			}
-		}
 		int day = (int) rest; 
 		rest = rest - day; //remove day; get decimals for hours
 		LocalDate utcDate = LocalDate.ofYearDay(year, day); //get date in UTC

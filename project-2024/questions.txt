@@ -13,4 +13,8 @@ How to change new AbsoluteDate to time data was sampled when creating kleperian 
 
 Use .frominstant (or smth like that) on getDateUTC to be more efficient maybe
 
-make TAI Offset automati on getDAteUTC
+fix getting TAI with UTC date getDateUTC
+
+Account for earth rotation in propagate orbit
+Make orbit go around whole Earth
+Still a lot of questions in propagate orbit.

@@ -75,7 +75,7 @@ public class TheWonderfulTeachersOrbitViewer extends ApplicationTemplate {
 		final SpacecraftState iniState = new SpacecraftState(iniOrbit);
 
 		// Initialization of the Runge Kutta integrator with a 2 s step
-		final double pasRk = 2.;
+		final double pasRk = 200.;
 		final FirstOrderIntegrator integrator = new ClassicalRungeKuttaIntegrator(pasRk);
 
 		// Initialization of the propagator
@@ -114,7 +114,7 @@ public class TheWonderfulTeachersOrbitViewer extends ApplicationTemplate {
 			}
 		};
 		// The handler frequency is set to 10S
-		propagator.setMasterMode(10., myStepHandler);
+		propagator.setMasterMode(2000, myStepHandler);
 //SPECIFIC
 
 		// Propagating 100s
@@ -168,7 +168,7 @@ public class TheWonderfulTeachersOrbitViewer extends ApplicationTemplate {
 				// Create and set an attribute bundle.
 				ShapeAttributes attrs = new BasicShapeAttributes();
 				attrs.setOutlineMaterial(new Material(Color.YELLOW));
-				attrs.setOutlineWidth(2d);
+				attrs.setOutlineWidth(1d);
 
 				// Create a path, set some of its properties and set its attributes.
 
