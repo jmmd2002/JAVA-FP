@@ -114,7 +114,7 @@ public class TheWonderfulTeachersOrbitViewer extends ApplicationTemplate {
 			}
 		};
 		// The handler frequency is set to 10S
-		propagator.setMasterMode(2000, myStepHandler);
+		propagator.setMasterMode(200, myStepHandler);
 //SPECIFIC
 
 		// Propagating 100s
@@ -139,6 +139,8 @@ public class TheWonderfulTeachersOrbitViewer extends ApplicationTemplate {
 	/** The AppFrame of our application */
 	public static class AppFrame extends ApplicationTemplate.AppFrame {
 
+		private static final long serialVersionUID = 1L;
+
 		/**
 		 * Constructor
 		 * 
@@ -150,17 +152,22 @@ public class TheWonderfulTeachersOrbitViewer extends ApplicationTemplate {
 			ObjectGatherer orbitsData = new ObjectGatherer("objectdata.txt");
 			
 			RenderableLayer layer = new RenderableLayer();
-			for (int k = 0; k < 100; k++) {
+			for (int k = 0; k < 10; k++) {
 				
 				//get parameters necessary to create the orbit for object k
-				double[] par = orbitsData.allObjects.get(k).getEssentialParameters(); //i, ra, e, argper, theta, n
-				double a = orbitsData.allObjects.get(k).getSemiMajorAxis(); 
+				double i = orbitsData.allObjects.get(k).getI();
+				double rAsc = orbitsData.allObjects.get(k).getRAsc();
+				double e = orbitsData.allObjects.get(k).getE();
+				double argPer = orbitsData.allObjects.get(k).getArgPer(); 
+				double theta = orbitsData.allObjects.get(k).getTheta(); 
+				double a = orbitsData.allObjects.get(k).getA(); 
 				//create orbit for object of index k
-				Orbit theOrbit = new KeplerianOrbit(a, par[2], par[0], par[3], par[1], par[4],
+				Orbit theOrbit = new KeplerianOrbit(a, e, i, argPer, rAsc, theta,
 													   PositionAngle.MEAN,FramesFactory.getGCRF(),
 													   new AbsoluteDate(),Constants.WGS84_EARTH_MU); 
 
 				List<GeodeticPoint> points = propagateMyWonderfulOrbit(theOrbit);
+				System.out.println(points);
 				List<Position> positions = glueBetweenPatriusAndWorldwind(points);
 
 				layer.setName("Some orbit");

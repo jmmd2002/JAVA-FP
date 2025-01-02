@@ -1,4 +1,5 @@
 A.1 - Add space objects as moving dots
+	- Adjust initial position of each object to show at the same date
 	- Account for rotation of the Earth
 	- Put different colours on different types of space objects (satellites, debris, etc...)
 	

@@ -1,19 +1,43 @@
 package fr.isae.mae.ss.y2024;
 
 import java.io.File;
+import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import fr.cnes.sirius.patrius.bodies.BodyShape;
+import fr.cnes.sirius.patrius.bodies.GeodeticPoint;
+import fr.cnes.sirius.patrius.bodies.OneAxisEllipsoid;
+import fr.cnes.sirius.patrius.frames.FactoryManagedFrame;
+import fr.cnes.sirius.patrius.frames.FramesFactory;
+import fr.cnes.sirius.patrius.math.ode.FirstOrderIntegrator;
+import fr.cnes.sirius.patrius.math.ode.nonstiff.ClassicalRungeKuttaIntegrator;
+import fr.cnes.sirius.patrius.orbits.KeplerianOrbit;
+import fr.cnes.sirius.patrius.orbits.Orbit;
+import fr.cnes.sirius.patrius.orbits.OrbitType;
+import fr.cnes.sirius.patrius.orbits.PositionAngle;
+import fr.cnes.sirius.patrius.propagation.SpacecraftState;
+import fr.cnes.sirius.patrius.propagation.numerical.NumericalPropagator;
+import fr.cnes.sirius.patrius.propagation.sampling.PatriusFixedStepHandler;
 import fr.cnes.sirius.patrius.time.AbsoluteDate;
 import fr.cnes.sirius.patrius.time.TimeScalesFactory;
 import fr.cnes.sirius.patrius.utils.Constants;
 import fr.cnes.sirius.patrius.utils.exception.PatriusException;
+import fr.cnes.sirius.patrius.utils.exception.PropagationException;
+import gov.nasa.worldwind.WorldWind;
+import gov.nasa.worldwind.avlist.AVKey;
+import gov.nasa.worldwind.geom.Position;
+import gov.nasa.worldwind.render.BasicShapeAttributes;
+import gov.nasa.worldwind.render.Material;
+import gov.nasa.worldwind.render.Path;
+import gov.nasa.worldwind.render.ShapeAttributes;
 
 import java.time.LocalDate;
-import java.time.Year;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 /**
  * Reads the .txt file containing all the information about the space objects from SpaceTrack.org database and
@@ -43,6 +67,7 @@ public class ObjectGatherer {
     	//Read and store lines from .txt file
         List<String> data = readFile(filePath);
         
+        AbsoluteDate currentDateUTC = new AbsoluteDate(LocalDateTime.now(ZoneId.of("UTC")), TimeScalesFactory.getTAI()); //current UTC date
         //Store the parameters from the txt
         int nO = 0; //space object counter
         for (String lineData : data) {
@@ -79,7 +104,9 @@ public class ObjectGatherer {
         		double theta = Double.parseDouble(lineData.substring(43,52).strip())*Math.PI/180; //mean anomaly (rad)
         		double n = Double.parseDouble(lineData.substring(52,64).strip())*2*Math.PI/(24*60*60); //mean motion (rad/s)
         		
-        		allObjects.get(nO-1).addParameters(i,rAsc,e,argPer,theta,n); //add parameters to space object
+        		allObjects.get(nO-1).addOrbit(i,rAsc,e,argPer,theta,n); //add orbit parameters and initial position to space object
+        		allObjects.get(nO-1).addCurrentPosition(currentDateUTC, allObjects.get(nO-1).orbit); //add current position
+        		System.out.println(nO + "/" + data.size()/3); //Display progress
         		break;
         		
         	default:
@@ -141,7 +168,7 @@ public class ObjectGatherer {
 		int second = (int) (rest*60); 
 
 		//get UTC date in the correct format for the KeplerianOrbit class
-		AbsoluteDate UTCDate = new AbsoluteDate(year,month,day,hour,minute,second, TimeScalesFactory.getTAI());
+		AbsoluteDate UTCDate = new AbsoluteDate(year,month,day,hour,minute,second);
 		return UTCDate;
 	}
 	
@@ -150,9 +177,7 @@ public class ObjectGatherer {
 	 * from SpaceTrack's .txt catalog. The values are meant to be stored
 	 * in SI units.
 	 * 
-	 * @returns SpaceObject with name, epoch time of data sampling (s), orbit inclination, 
-	 * right ascension of ascending node, argument of the perigee, mean anomaly, eccentricity, mean motion, period
-	 * and semi-major axis, in SI units
+	 * @returns SpaceObject with corresponding name, last sampling date, orbit parameters and position in space
 	 * @since 29/12/2024
 	 * @author joaom
 	 */
@@ -161,11 +186,10 @@ public class ObjectGatherer {
 		private String name; //name of space object
 		private AbsoluteDate date; //epoch UTC time of the data sampling with accuracy to the second
 		
-		private double i, rAsc, argPer, theta; //inclination, right ascending node, argument of the perigee, mean anomaly (rad)
-		private double e; //eccentricity
-		private double n; //mean motion (rad/s)
-		private double T; //period (s)
-		private double a; //semi-major axis (m)
+		private KeplerianOrbit orbit; //Keplerian orbit
+		private Path path; //path to be drawn; contains points of orbit as well (lat, long, alt)
+		private double[] initialPos = new double[3]; //position of the object when data is read (lat long alt) in rad; m
+		private double[] currentPos = new double[3]; //current position of the object (lat long alt) in rad; m
 		
 		/**
 		 * Constructor of SpaceObject. Initialise with name.
@@ -190,25 +214,56 @@ public class ObjectGatherer {
 		}
 		
 		/**
-		 * Adds the essential orbit parameters, in SI units, to space object. With the essential orbit parameters
-		 * any other parameter can be computed. Computes adittional necessary parameters.
+		 * Stores the objects orbit as a KeplerianOrbit and a WorldWind path to be drawn on the application.
 		 * 
-		 * @param objectI inclination (rad)
-		 * @param objectRAsc right ascension of ascending node (rad)
-		 * @param objectE eccentricity
-		 * @param objectArgPer argument of the perigee (rad)
-		 * @param objectTheta mean anomaly (rad)
-		 * @param mean motion (rad/s)
-		 * @since 29/12/2024
+		 * @param i inclination (rad)
+		 * @param rAsc right ascension of ascending node (rad)
+		 * @param e eccentricity
+		 * @param argPer argument of the perigee (rad)
+		 * @param theta mean anomaly (rad)
+		 * @param n mean motion (rad/s)
+		 * @since 01/01/2025
+		 * @author joaom
+		 * @throws PatriusException
 		 */
-		public void addParameters(double objectI, double objectRAsc, double objectE, double objectArgPer, 
-				                  double objectTheta, double objectN) {
-			// Essential parameters
-			i = objectI; rAsc = objectRAsc; e = objectE; argPer = objectArgPer; theta = objectTheta; n = objectN;
+		public void addOrbit(double i, double rAsc, double e, double argPer, 
+                double theta, double n) throws PatriusException {
 			
-			// Other parameters
-			T = (2*Math.PI/n); //period (s)
-			a = Math.pow(Math.cbrt(T*Math.sqrt(Constants.WGS84_EARTH_MU)/(2*Math.PI)),2); //semi-major axis (m)
+			//Get orbits and initial position
+			orbit = computeOrbit(i,rAsc,e,argPer,theta,n); //add orbit to space object
+			List<GeodeticPoint> patriusPoints = propagateOrbit(orbit, orbit.getKeplerianPeriod(),100); //get patrius points
+			path = new Path(glueBetweenPatriusAndWorldwind(patriusPoints)); //convert to world wind path
+			
+			//Initial positions
+			initialPos[0] = patriusPoints.get(0).getLatitude(); //latitude (rad)
+			initialPos[1] = patriusPoints.get(0).getLongitude(); //longitude (rad)
+			initialPos[2] = patriusPoints.get(0).getAltitude(); //altitude (m)
+
+			//Set path's attributes
+			ShapeAttributes attrs = new BasicShapeAttributes(); //initialise shape and attributes
+			attrs.setOutlineMaterial(new Material(Color.YELLOW)); //set colour
+			attrs.setOutlineWidth(1d); //set thickness
+			path.setAttributes(attrs);
+			path.setVisible(false); //starts not visible by default
+			path.setAltitudeMode(WorldWind.RELATIVE_TO_GROUND);  //altitude is measured relative to ground
+			path.setPathType(AVKey.GREAT_CIRCLE); //orbits are eliptical - closest shape is circle
+		}
+		
+		/**
+		 * Adds the current position of each space object.
+		 * @param currentDate AbsoluteDate corresponding the current date in UTC format
+		 * @param orbit Orbit of respective space object
+		 * @throws PatriusException
+		 * @since 02/01/2025
+		 * @author joaom
+		 */
+		public void addCurrentPosition (AbsoluteDate currentDate, Orbit orbit) throws PatriusException {
+			
+			double timeDiff = currentDate.durationFrom(date); //seconds passed since epoch date until current date
+			GeodeticPoint currentPoint = propagateOrbit(orbit,timeDiff,timeDiff).get(1);
+			currentPos[0] = currentPoint.getLatitude(); //latitude (rad)
+			currentPos[1] = currentPoint.getLongitude(); //longitude (rad)
+			currentPos[2] = currentPoint.getAltitude(); //altitude(rad)
 		}
 		
 		/**
@@ -234,39 +289,14 @@ public class ObjectGatherer {
 		}
 		
 		/**
-		 * Returns essential orbit parameters in SI units
-		 * 
-		 * @return double vector with: 
-		 * <br> inclination (rad)
-		 * <br> right ascension of ascending node (rad)
-		 * <br> eccentricity
-		 * <br> argument of the perigee (rad)
-		 * <br> mean anomaly (rad)
-		 * <br> mean motion (rad/s)
-		 * @since 29/12/2024
-		 * @author joaom
-		 */
-		public double[] getEssentialParameters() {
-			double[] essentialParameters = new double[6];
-			essentialParameters[0] = i;
-			essentialParameters[1] = rAsc;
-			essentialParameters[2] = e;
-			essentialParameters[3] = argPer;
-			essentialParameters[4] = theta;
-			essentialParameters[5] = n;
-			
-			return essentialParameters;
-		}
-		
-		/**
 		 * Returns the object's orbital period, in seconds.
 		 * 
 		 * @return Orbital period (s)
 		 * @since 29/12/2024
 		 * @author joaom
 		 */
-		public double getPeriod() {
-			return T;
+		public double getT() {
+			return orbit.getKeplerianPeriod();
 		}
 		
 		/**
@@ -276,8 +306,260 @@ public class ObjectGatherer {
 		 * @since 29/12/2024
 		 * @author joaom
 		 */
-		public double getSemiMajorAxis() {
-			return a;
+		public double getA() {
+			return orbit.getA();
+		}
+		
+		/**
+		 * Returns the orbit's inclination in rad.
+		 * 
+		 * @return inclination (rad)
+		 * @since 29/12/2024
+		 * @author joaom
+		 */
+		public double getI() {
+			return orbit.getI();
+		}
+		
+		/**
+		 * Returns the orbit's right ascension of ascending node in rad.
+		 * 
+		 * @return right ascension of ascending node (rad)
+		 * @since 29/12/2024
+		 * @author joaom
+		 */
+		public double getRAsc() {
+			return orbit.getRightAscensionOfAscendingNode();
+		}
+		
+		/**
+		 * Returns the orbit's eccentricity.
+		 * 
+		 * @return orbit's eccentricity
+		 * @since 29/12/2024
+		 * @author joaom
+		 */
+		public double getE() {
+			return orbit.getE();
+		}
+		
+		/**
+		 * Returns the orbit's argument of the perigee in rad.
+		 * 
+		 * @return argument of the perigee (rad)
+		 * @since 29/12/2024
+		 * @author joaom
+		 */
+		public double getArgPer() {
+			return orbit.getPerigeeArgument();
+		}
+		
+		/**
+		 * Returns the orbit's mean anomaly in rad.
+		 * 
+		 * @return mean anomaly (rad)
+		 * @since 29/12/2024
+		 * @author joaom
+		 */
+		public double getTheta() {
+			return orbit.getAnomaly(PositionAngle.MEAN);
+		}
+		
+		/**
+		 * Returns the mean motion of the space object associated with the orbit in rad/s.
+		 * 
+		 * @return mean motion (rad/s)
+		 * @since 29/12/2024
+		 * @author joaom
+		 */
+		public double getN() {
+			return orbit.getKeplerianMeanMotion();
+		}
+		
+		/**
+		 * Returns the latitude at epoch in radians.
+		 * 
+		 * @return latitude (rad)
+		 * @since 29/12/2024
+		 * @author joaom
+		 */
+		public double getInitialLat() {
+			return initialPos[0];
+		}
+		
+		/**
+		 * Returns the latitude at current time in radians.
+		 * 
+		 * @return latitude (rad)
+		 * @since 29/12/2024
+		 * @author joaom
+		 */
+		public double getCurrentLat() {
+			return currentPos[0];
+		}
+		
+		/**
+		 * Returns the longitude at epoch in radians.
+		 * 
+		 * @return longitude (rad)
+		 * @since 29/12/2024
+		 * @author joaom
+		 */
+		public double getInitialLon() {
+			return initialPos[1];
+		}
+		
+		/**
+		 * Returns the longitude at current time in radians.
+		 * 
+		 * @return longitude (rad)
+		 * @since 29/12/2024
+		 * @author joaom
+		 */
+		public double getCurrentLon() {
+			return currentPos[1];
+		}
+		
+		/**
+		 * Returns the altitude at epoch in meters.
+		 * 
+		 * @return altitude (m)
+		 * @since 29/12/2024
+		 * @author joaom
+		 */
+		public double getInitialAlt() {
+			return initialPos[2];
+		}
+		
+		/**
+		 * Returns the altitude at current time in meters.
+		 * 
+		 * @return laltitude (m)
+		 * @since 29/12/2024
+		 * @author joaom
+		 */
+		public double getCurrentAlt() {
+			return currentPos[2];
+		}
+		
+		/**
+		 * Returns the orbit's WorldWind path.
+		 * 
+		 * @return WorldWind orbit's path
+		 * @since 01/01/2025
+		 * @author joaom
+		 */
+		public Path getPath() {
+			return path;
+		}
+		
+		/**
+		 * Set orbit visibility on WorldWind.
+		 * 
+		 * @since 01/01/2025
+		 * @author joaom
+		 */
+		public void setVisible(boolean state) {
+			path.setVisible(state);
+		}
+		
+		/**
+		 * Computes the object's orbit. Necessary to get WorldWind points to draw the orbit's path.
+		 * 
+		 * @param i inclination (rad)
+		 * @param rAsc right ascension of ascending node (rad)
+		 * @param e eccentricity
+		 * @param argPer argument of the perigee (rad)
+		 * @param theta mean anomaly (rad)
+		 * @param n mean motion (rad/s)
+		 * @since 01/01/2025
+		 * @author joaom
+		 */
+		private KeplerianOrbit computeOrbit(double i, double rAsc, double e, double argPer, 
+				                  double theta, double n) {
+			
+			// Period and semi-major axis necessary for orbit
+			double T = (2*Math.PI/n); //period (s)
+			double a = Math.pow(Math.cbrt(T*Math.sqrt(Constants.WGS84_EARTH_MU)/(2*Math.PI)),2); //semi-major axis (m)
+			
+			orbit = new KeplerianOrbit(a,e,i,argPer,rAsc,theta,PositionAngle.MEAN,FramesFactory.getGCRF(),
+					   date,Constants.WGS84_EARTH_MU); //compute object orbit
+			
+			return orbit;
+		}
+		
+		/**
+		 * Propagates the orbit of a space object, computing its coordinates along the orbit.
+		 * @param iniOrbit Orbit of space object to be propagated
+		 * @return List of coordinates along the orbit in ITRF - latitude(rad), longitude (rad), altitude (m)
+		 * @throws PatriusException
+		 * @since 31/12/2024
+		 * @author Professor
+		 */
+		public static List<GeodeticPoint> propagateOrbit(Orbit iniOrbit, double shift, double step) throws PatriusException {
+			
+			SpacecraftState iniState = new SpacecraftState(iniOrbit); //initial conditions for the IVP
+			
+			//RK intergrator
+			double stepRK = 100; //step for the RK integrator (s); can be large since there are no inputs or variations in the orbit
+			FirstOrderIntegrator RKIntegrator = new ClassicalRungeKuttaIntegrator(stepRK);
+			//Propagator
+			NumericalPropagator propagator = new NumericalPropagator(RKIntegrator);
+			propagator.resetInitialState(iniState);
+			propagator.setOrbitType(OrbitType.CARTESIAN); //propagate with cartesian coordinates
+			
+			
+			//Step handler
+			final FactoryManagedFrame ITRF = FramesFactory.getITRF();
+			final BodyShape EARTH = new OneAxisEllipsoid(Constants.WGS84_EARTH_EQUATORIAL_RADIUS,
+					Constants.WGS84_EARTH_FLATTENING, ITRF); //create Earth
+			//step handler
+			final ArrayList<GeodeticPoint> listOfStates = new ArrayList<>();
+			PatriusFixedStepHandler myStepHandler = new PatriusFixedStepHandler() {
+				
+				private static final long serialVersionUID = 1L;
+
+				public void init(SpacecraftState s0, AbsoluteDate t) {} //not necessary
+
+				/** The step handler used to store every point */
+				public void handleStep(SpacecraftState currentState, boolean isLast) throws PropagationException {
+
+					GeodeticPoint geodeticPoint;
+					try {
+						geodeticPoint = EARTH.transform(currentState.getPVCoordinates().getPosition(), ITRF,
+								currentState.getDate()); //latitude (rad), longitude (rad), altitude (m)
+					} catch (PatriusException e) {
+						throw new PropagationException(e);
+					}
+					// Adding S/C to the list
+					listOfStates.add(geodeticPoint);
+				}
+			};
+			//handler period is set on first argument - 1 point computed every x s
+			propagator.setMasterMode(step, myStepHandler); //calls handlestep with some inputs
+			
+			// TO DO - UNDERSTANDS WHY THIS IS NECESSARY
+			AbsoluteDate finalDate = iniOrbit.getDate().shiftedBy(shift); //advance date to final point
+			propagator.propagate(finalDate); //final point when one revolution is complete
+
+			return listOfStates; //latitude(rad), longitude (rad), altitude (m)
+		}
+		
+		/** 
+		 * This method maps the points of Patrius to positions of WorldWind to draw the orbits.
+		 * @param points List with Patrius points - latitude (rad), longitude (rad), altitude (m)
+		 * @return List with WorldWind points.
+		 * @since 31/12/2024
+		 * @author Professor
+		 */
+		public static List<Position> glueBetweenPatriusAndWorldwind(List<GeodeticPoint> points) {
+			
+			//Create WroldWind points to draw orbit
+			List<Position> pointsWW = new ArrayList<Position>(points.size()); 
+			for (GeodeticPoint point : points) {
+				pointsWW.add(Position.fromRadians(point.getLatitude(), point.getLongitude(), point.getAltitude()));
+			}
+			return pointsWW;
 		}
 	}
 }
