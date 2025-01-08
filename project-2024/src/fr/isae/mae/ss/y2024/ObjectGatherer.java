@@ -242,7 +242,7 @@ public class ObjectGatherer {
 			//Set path's attributes
 			ShapeAttributes attrs = new BasicShapeAttributes(); //initialise shape and attributes
 			attrs.setOutlineMaterial(new Material(Color.YELLOW)); //set colour
-			attrs.setOutlineWidth(1d); //set thickness
+			attrs.setOutlineWidth(0.5d); //set thickness
 			path.setAttributes(attrs);
 			path.setVisible(false); //starts not visible by default
 			path.setAltitudeMode(WorldWind.RELATIVE_TO_GROUND);  //altitude is measured relative to ground

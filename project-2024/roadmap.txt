@@ -1,15 +1,26 @@
-A.1 - Add space objects as moving dots
-	- Adjust initial position of each object to show at the same date
+A.1 - Add space objects as dots - DONE
+	- Adjust initial position of each object to show at the same date - DONE
 	- Account for rotation of the Earth
-	- Put different colours on different types of space objects (satellites, debris, etc...)
+	
+	PEDRO
+	- Put different colours on different types of space objects (satellites, debris, etc...) - PEDRO
+	- Create a filter to make only certain groups of space objects appear - PEDRO
 	
 
-A.2 - Make orbits appear only when respective space object is selected
-	- Make orbits appear on the full globe
-	- Add respective space object's colour to orbit's colour
+A.2 - Make orbits appear only when respective space object is selected - JOANA
+	- Make orbits appear on the full globe - MARTA
+	- Add respective space object's colour to orbit's colour - JOANA
+	
+	//
 	- This is only where we compute the respective orbit points.
 	
-A.3 - Create a filter to make only certain groups of space objects appear
+A.3 - 
+
+B.1 
+	- Make app go full screen - MARTA
+	- Remove compass - MARTA
+	- Remove stars - MARTA
+	
 	
 Y.1 - Add exceptions and respective handlers
 

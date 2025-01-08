@@ -37,25 +37,26 @@ public class OrbitViewer extends ApplicationTemplate{
 			super(false,false,false); //toggle some visual controls (status bar, layer panel, status panel)
 			
 			// Get space objects' information
-			ObjectGatherer orbitsData = new ObjectGatherer("objectdata.txt");
+			ObjectGatherer orbitsData = new ObjectGatherer("teste.txt");
 			List<ObjectGatherer.SpaceObject> allObjects = orbitsData.allObjects; //all space objects
 			
 			
 			//TO DO - ADD filtered lists
 			
-			/*
+			
 			// Create orbits
 			
 			RenderableLayer orbitsLayer = new RenderableLayer(); //layer for all orbits
 			orbitsLayer.setName("All orbits");
 			
 			
-			for(int k = 0; k < 10; k++) {
+			for(int k = 0; k < allObjects.size(); k++) {
+			allObjects.get(k).getPath().setVisible(true);
 			orbitsLayer.addRenderable(orbitsData.allObjects.get(k).getPath()); //render orbits in respective layer
 			}
 			insertBeforeCompass(getWwd(), orbitsLayer); //Add layer to model
-			layers.remove(orbitsLayer);
-			*/
+			
+			
 			
 			//Mark position of space objects - TO DO COMPLETE
 			displayObjects(allObjects);
