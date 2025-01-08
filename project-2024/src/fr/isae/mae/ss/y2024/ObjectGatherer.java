@@ -230,8 +230,11 @@ public class ObjectGatherer {
                 double theta, double n) throws PatriusException {
 			
 			//Get orbits and initial position
-			orbit = computeOrbit(i,rAsc,e,argPer,theta,n); //add orbit to space object
-			List<GeodeticPoint> patriusPoints = propagateOrbit(orbit, orbit.getKeplerianPeriod(),100); //get patrius points
+			orbit = computeOrbit(i,rAsc,e,argPer,theta,n); //add orbit to space object~
+			//get patrius points; more points for more eccentric orbits
+			List<GeodeticPoint> patriusPoints = propagateOrbit(orbit, orbit.getKeplerianPeriod(),Math.round(orbit.getKeplerianPeriod()/(1+orbit.getE()/0.005)));
+			System.out.println(orbit.getKeplerianPeriod()/(orbit.getKeplerianPeriod()/(1+orbit.getE()/0.005)));
+			System.out.println(orbit.getE());
 			path = new Path(glueBetweenPatriusAndWorldwind(patriusPoints)); //convert to world wind path
 			
 			//Initial positions
@@ -501,7 +504,7 @@ public class ObjectGatherer {
 			SpacecraftState iniState = new SpacecraftState(iniOrbit); //initial conditions for the IVP
 			
 			//RK intergrator
-			double stepRK = 100; //step for the RK integrator (s); can be large since there are no inputs or variations in the orbit
+			double stepRK = 100; //step for the RK integrator;
 			FirstOrderIntegrator RKIntegrator = new ClassicalRungeKuttaIntegrator(stepRK);
 			//Propagator
 			NumericalPropagator propagator = new NumericalPropagator(RKIntegrator);

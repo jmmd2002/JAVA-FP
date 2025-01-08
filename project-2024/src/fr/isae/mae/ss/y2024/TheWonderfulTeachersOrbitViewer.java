@@ -149,7 +149,7 @@ public class TheWonderfulTeachersOrbitViewer extends ApplicationTemplate {
 		public AppFrame() throws PatriusException {
 			super(true, true, false);
 			
-			ObjectGatherer orbitsData = new ObjectGatherer("objectdata.txt");
+			ObjectGatherer orbitsData = new ObjectGatherer("teste.txt");
 			
 			RenderableLayer layer = new RenderableLayer();
 			for (int k = 0; k < 10; k++) {
