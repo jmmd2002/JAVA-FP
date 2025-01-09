@@ -191,6 +191,7 @@ public class ObjectGatherer {
 		private double[] initialPos = new double[3]; //position of the object when data is read (lat long alt) in rad; m
 		private double[] currentPos = new double[3]; //current position of the object (lat long alt) in rad; m
 		
+		
 		/**
 		 * Constructor of SpaceObject. Initialise with name.
 		 * 
@@ -230,11 +231,13 @@ public class ObjectGatherer {
                 double theta, double n) throws PatriusException {
 			
 			//Get orbits and initial position
-			orbit = computeOrbit(i,rAsc,e,argPer,theta,n); //add orbit to space object~
+			orbit = computeOrbit(i,rAsc,e,argPer,theta,n); //add orbit to space object
+			double T = orbit.getKeplerianPeriod(); //orbit period (s)
+			
 			//get patrius points; more points for more eccentric orbits
-			List<GeodeticPoint> patriusPoints = propagateOrbit(orbit, orbit.getKeplerianPeriod(),Math.round(orbit.getKeplerianPeriod()/(1+orbit.getE()/0.005)));
-			System.out.println(orbit.getKeplerianPeriod()/(orbit.getKeplerianPeriod()/(1+orbit.getE()/0.005)));
-			System.out.println(orbit.getE());
+			List<GeodeticPoint> patriusPoints = propagateOrbit(orbit, T,Math.round(T/(1+e/0.005)));
+			System.out.println(T/(T/(1+e/0.005)));
+			System.out.println(e);
 			path = new Path(glueBetweenPatriusAndWorldwind(patriusPoints)); //convert to world wind path
 			
 			//Initial positions
@@ -541,9 +544,8 @@ public class ObjectGatherer {
 			//handler period is set on first argument - 1 point computed every x s
 			propagator.setMasterMode(step, myStepHandler); //calls handlestep with some inputs
 			
-			// TO DO - UNDERSTANDS WHY THIS IS NECESSARY
-			AbsoluteDate finalDate = iniOrbit.getDate().shiftedBy(shift); //advance date to final point
-			propagator.propagate(finalDate); //final point when one revolution is complete
+			AbsoluteDate finalDate = iniOrbit.getDate().shiftedBy(shift+step); //advance date to final point + step to avoid holes in orbits
+			propagator.propagate(finalDate); //propagate until desired time
 
 			return listOfStates; //latitude(rad), longitude (rad), altitude (m)
 		}

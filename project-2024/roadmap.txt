@@ -1,6 +1,4 @@
-A.1 - Add space objects as dots - DONE
-	- Adjust initial position of each object to show at the same date - DONE
-	- Account for rotation of the Earth
+A.1 - Account for rotation of the Earth
 	
 	PEDRO
 	- Put different colours on different types of space objects (satellites, debris, etc...) - PEDRO
@@ -8,7 +6,6 @@ A.1 - Add space objects as dots - DONE
 	
 
 A.2 - Make orbits appear only when respective space object is selected - JOANA
-	- Make orbits appear on the full globe - MARTA
 	- Add respective space object's colour to orbit's colour - JOANA
 	
 	//

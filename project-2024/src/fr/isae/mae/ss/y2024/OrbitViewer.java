@@ -61,8 +61,8 @@ public class OrbitViewer extends ApplicationTemplate {
 	        
 	        // Force canvas to occupy the remaining space
 	        worldWindCanvas.setPreferredSize(Toolkit.getDefaultToolkit().getScreenSize());
-	        frame.setSize(1100, 630); // Adjust width for the control panel
-	        frame.setMinimumSize(new Dimension(1100, 630));
+	        //frame.setSize(1100, 630); // Adjust width for the control panel
+	        //frame.setMinimumSize(new Dimension(1100, 630));
 	        
 	        // Set the view for the canvas
 	        worldWindCanvas.setView(new FullOrbitView());
