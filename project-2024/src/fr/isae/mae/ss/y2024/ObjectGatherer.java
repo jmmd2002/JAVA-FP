@@ -236,8 +236,6 @@ public class ObjectGatherer {
 			
 			//get patrius points; more points for more eccentric orbits
 			List<GeodeticPoint> patriusPoints = propagateOrbit(orbit, T,Math.round(T/(1+e/0.005)));
-			System.out.println(T/(T/(1+e/0.005)));
-			System.out.println(e);
 			path = new Path(glueBetweenPatriusAndWorldwind(patriusPoints)); //convert to world wind path
 			
 			//Initial positions
@@ -265,7 +263,8 @@ public class ObjectGatherer {
 		 */
 		public void addCurrentPosition (AbsoluteDate currentDate, Orbit orbit) throws PatriusException {
 			
-			double timeDiff = currentDate.durationFrom(date); //seconds passed since epoch date until current date
+			//seconds passed since epoch date until current date - adjusted for orbit periods - program runs faster
+			double timeDiff = adjustTime(currentDate.durationFrom(date), orbit.getKeplerianPeriod()); 
 			GeodeticPoint currentPoint = propagateOrbit(orbit,timeDiff,timeDiff).get(1);
 			currentPos[0] = currentPoint.getLatitude(); //latitude (rad)
 			currentPos[1] = currentPoint.getLongitude(); //longitude (rad)
@@ -467,6 +466,18 @@ public class ObjectGatherer {
 		 */
 		public void setVisible(boolean state) {
 			path.setVisible(state);
+		}
+		
+		/**
+		 * Adjust time of an object in orbit to be within 1 period
+		 * @param time
+		 * @param T
+		 * @return time equivalent to the same position within 1 period
+		 */
+		public double adjustTime(double time, double T) {
+			
+			while (time > T) {time -= T;} //adjust time to be smaller than one period
+			return time;
 		}
 		
 		/**

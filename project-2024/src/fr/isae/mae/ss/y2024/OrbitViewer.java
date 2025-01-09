@@ -11,7 +11,6 @@ import gov.nasa.worldwindx.examples.ApplicationTemplate;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.Toolkit;
 import java.util.*;
 
