@@ -264,10 +264,12 @@ public class ObjectGatherer {
 		public void addCurrentPosition (AbsoluteDate currentDate, Orbit orbit) throws PatriusException {
 			
 			//seconds passed since epoch date until current date - adjusted for orbit periods - program runs faster
-			double timeDiff = adjustTime(currentDate.durationFrom(date), orbit.getKeplerianPeriod()); 
-			GeodeticPoint currentPoint = propagateOrbit(orbit,timeDiff,timeDiff).get(1);
+			double timeDiff = currentDate.durationFrom(date); 
+			double timeDiffAdjusted = adjustTime(timeDiff, orbit.getKeplerianPeriod());
+			GeodeticPoint currentPoint = propagateOrbit(orbit,timeDiffAdjusted,timeDiffAdjusted).get(1);
 			currentPos[0] = currentPoint.getLatitude(); //latitude (rad)
-			currentPos[1] = currentPoint.getLongitude(); //longitude (rad)
+			//longitude (rad)  (accounts for rotation of the earth)
+			currentPos[1] = currentPoint.getLongitude() - Constants.WGS84_EARTH_ANGULAR_VELOCITY*timeDiff; 
 			currentPos[2] = currentPoint.getAltitude(); //altitude(rad)
 		}
 		
