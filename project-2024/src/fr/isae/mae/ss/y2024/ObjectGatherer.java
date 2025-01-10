@@ -184,6 +184,8 @@ public class ObjectGatherer {
 	public static class SpaceObject {
 		
 		private String name; //name of space object
+		private String type; //type of space object (satellite, debris, etc..)
+		private Color cor; //marker color for WorldWind
 		private AbsoluteDate date; //epoch UTC time of the data sampling with accuracy to the second
 		
 		private KeplerianOrbit orbit; //Keplerian orbit
@@ -195,12 +197,13 @@ public class ObjectGatherer {
 		/**
 		 * Constructor of SpaceObject. Initialise with name.
 		 * 
-		 * @param objectName String containing the object's name
+		 * @param objectName String containing the object's name and type.
 		 * @since 29/12/2024
 		 * @author joaom
 		 */
 		public SpaceObject(String objectName) {
 			name = objectName;
+			setType(objectName);
 		}
 		
 		/**
@@ -268,8 +271,7 @@ public class ObjectGatherer {
 			double timeDiffAdjusted = adjustTime(timeDiff, orbit.getKeplerianPeriod());
 			GeodeticPoint currentPoint = propagateOrbit(orbit,timeDiffAdjusted,timeDiffAdjusted).get(1);
 			currentPos[0] = currentPoint.getLatitude(); //latitude (rad)
-			//longitude (rad)  (accounts for rotation of the earth)
-			currentPos[1] = currentPoint.getLongitude() - Constants.WGS84_EARTH_ANGULAR_VELOCITY*timeDiff; 
+			currentPos[1] = currentPoint.getLongitude(); //longitude (rad) 
 			currentPos[2] = currentPoint.getAltitude(); //altitude(rad)
 		}
 		
@@ -282,6 +284,28 @@ public class ObjectGatherer {
 		 */
 		public String getName() {
 			return name;
+		}
+		
+		/**
+		 * Returns the object's type.
+		 * 
+		 * @return String containing type of the object
+		 * @since 10/01/2025
+		 * @author pedro
+		 */
+		public String getType() {
+            return type;
+        }
+		
+		/**
+		 * Returns the object's marker color.
+		 * 
+		 * @return color 
+		 * @since 10/01/2025
+		 * @author pedro
+		 */
+		public Color getColor() {
+			return cor;
 		}
 		
 		/**
@@ -437,7 +461,7 @@ public class ObjectGatherer {
 		public double getInitialAlt() {
 			return initialPos[2];
 		}
-		
+	
 		/**
 		 * Returns the altitude at current time in meters.
 		 * 
@@ -463,11 +487,49 @@ public class ObjectGatherer {
 		/**
 		 * Set orbit visibility on WorldWind.
 		 * 
+		 * @param state true for visible or false for invisible
 		 * @since 01/01/2025
 		 * @author joaom
 		 */
 		public void setVisible(boolean state) {
 			path.setVisible(state);
+		}
+		
+		/**
+		 * Set marker color for the space object
+		 * @param selectedColor
+		 * @since 10/01/2025
+		 * @author pedro
+		 */		 
+		public void setColor(Color selectedColor) {
+			cor = selectedColor;
+		}
+		
+
+		//TODO add missing filters
+		/**
+		 * Sets the object's type with the name. 
+		 * 
+		 * @param name Object's name
+		 * @since 10/01/2025
+		 * @author pedro
+		 */
+		public void setType(String name){
+            if (name.contains("R/B")) {
+                type = "ROCKET_BODY";
+            } else if (name.contains("DEB")) {
+                type = "DEBRIS";
+            } else if (name.contains("STARLINK")) {
+                type = "STARLINK";
+            } else if (name.contains("ONEWEB")) {
+                type = "ONEWEB";
+            } else if (name.contains("BEIDOU")) {
+                type = "BEIDOU";
+            } else if (name.contains("IRIDIUM")) {
+                type = "IRIDIUM";  
+            } else {
+                type = "SATELLITE";
+            }
 		}
 		
 		/**

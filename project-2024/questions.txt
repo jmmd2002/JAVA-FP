@@ -18,3 +18,5 @@ fix getting TAI with UTC date getDateUTC
 Account for earth rotation in propagate orbit
 Make orbit go around whole Earth
 Still a lot of questions in propagate orbit.
+
+Introduce filter for GPS; introduce filter for TBD
