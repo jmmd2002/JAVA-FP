@@ -1,25 +1,35 @@
 package fr.isae.mae.ss.y2024;
 
-import gov.nasa.worldwind.WorldWind;
-import gov.nasa.worldwind.geom.Position;
-import gov.nasa.worldwind.layers.*;
-import gov.nasa.worldwind.render.*;
-import gov.nasa.worldwind.render.markers.*;
-import gov.nasa.worldwindx.examples.ApplicationTemplate;
-
-import javax.swing.*;
-import javax.swing.Timer;
-
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.util.ArrayList;
 import java.util.List;
 
-import java.awt.Color;
-import java.util.*;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 
 import fr.cnes.sirius.patrius.utils.exception.PatriusException;
 import fr.isae.mae.ss.y2024.ObjectGatherer.SpaceObject;
+import gov.nasa.worldwind.WorldWind;
+import gov.nasa.worldwind.geom.Position;
+import gov.nasa.worldwind.layers.Layer;
+import gov.nasa.worldwind.layers.LayerList;
+import gov.nasa.worldwind.layers.MarkerLayer;
+import gov.nasa.worldwind.layers.RenderableLayer;
+import gov.nasa.worldwind.render.Material;
+import gov.nasa.worldwind.render.PointPlacemark;
+import gov.nasa.worldwind.render.PointPlacemarkAttributes;
+import gov.nasa.worldwind.render.markers.BasicMarker;
+import gov.nasa.worldwind.render.markers.BasicMarkerAttributes;
+import gov.nasa.worldwind.render.markers.Marker;
+import gov.nasa.worldwind.render.markers.MarkerAttributes;
+import gov.nasa.worldwindx.examples.ApplicationTemplate;
 
 /**
  * Main function of the program
@@ -58,40 +68,16 @@ public static class AppFrame extends ApplicationTemplate.AppFrame {
 			super(false,false,false); //toggle some visual controls (status bar, layer panel, status panel)
 			getWwd().setView(new FullOrbitView()); //make objects appear all around Earth
 			
-			// Get space objects' information
-			final ObjectGatherer orbitsData = new ObjectGatherer("3le.txt");
+			//Get space objects' information
+			final ObjectGatherer orbitsData = new ObjectGatherer("teste.txt");
 			allObjects = orbitsData.allObjects; //all space objects
 			sortObjects(allObjects); //sort the elements into the filter layers
 			
-			// Add the combo box
+			//Add the combo box
 	        addComboBox();
-			
-			// Marker to indicate current position
-			final Marker mouseDot = spawnMouse(); 
-			
-			// Create orbits
-			
-			// Set up a timer to continuously print the mouse position
-	        Timer positionTimer = new Timer(100, new ActionListener() { // Update every 100 ms
-	            @Override
-	            public void actionPerformed(ActionEvent e) {
-	                // Get the current position under the mouse
-	                Position position = getWwd().getCurrentPosition();
-	                if (position != null) {
-	                    double latitude = position.getLatitude().degrees;
-	                    double longitude = position.getLongitude().degrees;
-	                    double altitude = position.getElevation(); // Altitude in meters
-	                    System.out.printf("Mouse Position: Latitude = %.6f, Longitude = %.6f, Altitude = %.2f meters%n",
-	                            latitude, longitude, altitude);
-	                    
-	                 // Update the green dot position
-	                    mouseDot.setPosition(position);
-	                    getWwd().redraw(); // Redraw the WorldWindow to reflect changes
-	                }
-	            }
-	        });
 	        
-	        positionTimer.start(); // Start the timer
+	        //Create and move mouse pointer
+	        spawnMouse();
 		}
 		
 		//TODO finish comments
@@ -204,25 +190,69 @@ public static class AppFrame extends ApplicationTemplate.AppFrame {
 	        this.getContentPane().add(comboBoxPanel, BorderLayout.NORTH);
 	    }// Place it at the top of the frame
 		
-		private Marker spawnMouse() {
-			
-			// Create a layer for the green dot
-	        final MarkerLayer dotLayer = new MarkerLayer();
-	        getWwd().getModel().getLayers().add(dotLayer);
+	    /**
+	     * Creates and moves mouse pointer. Space and shift keys increase and decrease the altitude, respectively,
+	     * arrow keys increase or decrease longitude and latitude
+	     * @since 10/01/2025
+	     * @author joaom
+	     */
+		private void spawnMouse() {
+		
+	        //Create mouse dot at initial position
+	        PointPlacemark dot = new PointPlacemark(Position.fromDegrees(0, 0, 0)); //create a dot at 0 0 0
+	        PointPlacemarkAttributes attr = new PointPlacemarkAttributes();
+	        attr.setUsePointAsDefaultImage(true);
+	        attr.setScale((double) 10); //size of the dot
+	        attr.setLineMaterial(new Material(Color.GREEN)); //colour of the dot
+	        dot.setAltitudeMode(WorldWind.RELATIVE_TO_GROUND); //make dot leave Earth when altitude increases
+	        dot.setAttributes(attr);
 	        
-			//Set marker's attributes
-			MarkerAttributes attrsDot = new BasicMarkerAttributes();
-			attrsDot.setMaterial(new Material(Color.GREEN)); //colour
-			attrsDot.setMarkerPixels(2d); //size
-			
-	        // Create a PointPlacemark to represent the green dot
-	        Marker mouseDot = new BasicMarker(Position.fromDegrees(0, 0, 0), attrsDot);
-	        List<Marker>mouseDotList = new ArrayList<>();
-	        mouseDotList.add(mouseDot);
-	        dotLayer.setMarkers(mouseDotList);
-	        layers.add(dotLayer);
+	        //Add mouse dot to WorldWind
+	        RenderableLayer mouseLayer = new RenderableLayer();
+	        layers.add(mouseLayer);
+	        mouseLayer.addRenderable(dot);
 	        
-	        return mouseDot;
+	        //Attach a KeyListener to the WorldWindow to move dot
+	        getWwd().getInputHandler().addKeyListener(new KeyAdapter() {
+	            @Override
+	            public void keyPressed(KeyEvent e) {
+	                double latitude = dot.getPosition().getLatitude().degrees;
+	                double longitude = dot.getPosition().getLongitude().degrees;
+	                double altitude = dot.getPosition().getAltitude();
+
+	                switch (e.getKeyCode()) {
+	                    case KeyEvent.VK_SPACE: //space increases altitude
+	                        altitude += 10000; //m
+	                        e.consume(); //prevent default action
+	                        break;
+	                    case KeyEvent.VK_SHIFT: //shift decreases altitude
+	                        altitude -= 10000; //m
+	                        if (altitude < 0) altitude = 0; //prevent altitude going into negative values
+	                        e.consume(); //prevent default action
+	                        break;
+	                    case KeyEvent.VK_UP: //up arrow increases latitude
+	                        latitude += 1; //deg
+	                        e.consume(); //prevent default action
+	                        break;
+	                    case KeyEvent.VK_DOWN: //down arrow decreases latitude
+	                        latitude -= 1; //deg
+	                        e.consume(); //prevent default action
+	                        break;
+	                    case KeyEvent.VK_RIGHT: //right arrow increases longitude
+	                        longitude += 1; //deg
+	                        e.consume(); //prevent default action
+	                        break;
+	                    case KeyEvent.VK_LEFT: //left arrow decreases longitude
+	                        longitude -= 1; //deg
+	                        e.consume(); //prevent default action
+	                        break;
+	                }
+
+	                // Update the position of the dot
+	                dot.setPosition(Position.fromDegrees(latitude, longitude, altitude));
+	                getWwd().redraw();
+	            }
+	        });
 		}
 		
 		/**
