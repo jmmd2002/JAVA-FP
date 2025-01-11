@@ -14,6 +14,7 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
+import fr.cnes.sirius.patrius.utils.Constants;
 import fr.cnes.sirius.patrius.utils.exception.PatriusException;
 import fr.isae.mae.ss.y2024.ObjectGatherer.SpaceObject;
 import gov.nasa.worldwind.WorldWind;
@@ -25,6 +26,7 @@ import gov.nasa.worldwind.layers.RenderableLayer;
 import gov.nasa.worldwind.render.Material;
 import gov.nasa.worldwind.render.PointPlacemark;
 import gov.nasa.worldwind.render.PointPlacemarkAttributes;
+import gov.nasa.worldwind.render.ShapeAttributes;
 import gov.nasa.worldwind.render.markers.BasicMarker;
 import gov.nasa.worldwind.render.markers.BasicMarkerAttributes;
 import gov.nasa.worldwind.render.markers.Marker;
@@ -56,6 +58,7 @@ public static class AppFrame extends ApplicationTemplate.AppFrame {
 	    private final List<SpaceObject> beidou = new ArrayList<>();
 	    private final List<SpaceObject> starlink = new ArrayList<>();
 	    private final List<SpaceObject> iridium = new ArrayList<>();
+	    private List<SpaceObject> activeFilter;
 	    //TODO add gps; add TBD
 	    
 	    final private LayerList layers = getWwd().getModel().getLayers(); //layer list to add markers
@@ -69,7 +72,7 @@ public static class AppFrame extends ApplicationTemplate.AppFrame {
 			getWwd().setView(new FullOrbitView()); //make objects appear all around Earth
 			
 			//Get space objects' information
-			final ObjectGatherer orbitsData = new ObjectGatherer("teste.txt");
+			final ObjectGatherer orbitsData = new ObjectGatherer("3le.txt");
 			allObjects = orbitsData.allObjects; //all space objects
 			sortObjects(allObjects); //sort the elements into the filter layers
 			
@@ -149,33 +152,41 @@ public static class AppFrame extends ApplicationTemplate.AppFrame {
 	                    case "Satellites":
 	                    	 if (currentLayer != null) {getWwd().getModel().getLayers().remove(currentLayer);}
 	                         currentLayer = displayObjects(satellites);
+	                         activeFilter = satellites;
 	                        break;
 	                    case "Debris":
 	                    	if (currentLayer != null) {getWwd().getModel().getLayers().remove(currentLayer);}
 	                    	currentLayer = displayObjects(debris);
+	                    	activeFilter = debris;
 	                        break;
 	                    case "Rocket Bodies":
 	                    	if (currentLayer != null) {getWwd().getModel().getLayers().remove(currentLayer);}
 	                    	currentLayer = displayObjects(rocketBodies);
+	                    	activeFilter = rocketBodies;
 	                        break;
 	                    case "OneWeb":
 	                    	if (currentLayer != null) {getWwd().getModel().getLayers().remove(currentLayer);}
 	                    	currentLayer = displayObjects(oneweb);
+	                    	activeFilter = oneweb;
 	                        break;
 	                    case "Iridium":
 	                    	if (currentLayer != null) {getWwd().getModel().getLayers().remove(currentLayer);}
 	                    	currentLayer = displayObjects(iridium);
+	                    	activeFilter = iridium;
 	                        break;
 	                    case "Beidou":
 	                    	if (currentLayer != null) {getWwd().getModel().getLayers().remove(currentLayer);}
 	                    	currentLayer = displayObjects(beidou);
+	                    	activeFilter = beidou;
 	                        break;
 	                    case "Starlink":
 	                    	if (currentLayer != null) {getWwd().getModel().getLayers().remove(currentLayer);}
 	                    	currentLayer = displayObjects(starlink);
+	                    	activeFilter = starlink;
 	                        break;
 	                    case "All":
-	                    displayObjects(allObjects);
+	                    	displayObjects(allObjects);
+	                    	activeFilter = allObjects;
 	                        break;
 	                }
 	            }
@@ -202,7 +213,7 @@ public static class AppFrame extends ApplicationTemplate.AppFrame {
 	        PointPlacemark dot = new PointPlacemark(Position.fromDegrees(0, 0, 0)); //create a dot at 0 0 0
 	        PointPlacemarkAttributes attr = new PointPlacemarkAttributes();
 	        attr.setUsePointAsDefaultImage(true);
-	        attr.setScale((double) 10); //size of the dot
+	        attr.setScale((double) 5); //size of the dot
 	        attr.setLineMaterial(new Material(Color.GREEN)); //colour of the dot
 	        dot.setAltitudeMode(WorldWind.RELATIVE_TO_GROUND); //make dot leave Earth when altitude increases
 	        dot.setAttributes(attr);
@@ -219,40 +230,96 @@ public static class AppFrame extends ApplicationTemplate.AppFrame {
 	                double latitude = dot.getPosition().getLatitude().degrees;
 	                double longitude = dot.getPosition().getLongitude().degrees;
 	                double altitude = dot.getPosition().getAltitude();
+	                
+	                boolean changed = false; //control variable to check if changes were made
 
 	                switch (e.getKeyCode()) {
 	                    case KeyEvent.VK_SPACE: //space increases altitude
-	                        altitude += 10000; //m
+	                        altitude += 50000; //m
 	                        e.consume(); //prevent default action
+	                        changed = true; //flag changed
 	                        break;
 	                    case KeyEvent.VK_SHIFT: //shift decreases altitude
-	                        altitude -= 10000; //m
+	                        altitude -= 50000; //m
 	                        if (altitude < 0) altitude = 0; //prevent altitude going into negative values
 	                        e.consume(); //prevent default action
+	                        changed = true; //flag changed
 	                        break;
 	                    case KeyEvent.VK_UP: //up arrow increases latitude
-	                        latitude += 1; //deg
+	                        latitude += 0.5; //deg
 	                        e.consume(); //prevent default action
+	                        changed = true; //flag changed
 	                        break;
 	                    case KeyEvent.VK_DOWN: //down arrow decreases latitude
-	                        latitude -= 1; //deg
+	                        latitude -= 0.5; //deg
 	                        e.consume(); //prevent default action
+	                        changed = true; //flag changed
 	                        break;
 	                    case KeyEvent.VK_RIGHT: //right arrow increases longitude
-	                        longitude += 1; //deg
+	                        longitude += 0.5; //deg
 	                        e.consume(); //prevent default action
+	                        changed = true; //flag changed
 	                        break;
 	                    case KeyEvent.VK_LEFT: //left arrow decreases longitude
-	                        longitude -= 1; //deg
+	                        longitude -= 0.5; //deg
 	                        e.consume(); //prevent default action
+	                        changed = true; //flag changed
 	                        break;
 	                }
 
-	                // Update the position of the dot
-	                dot.setPosition(Position.fromDegrees(latitude, longitude, altitude));
-	                getWwd().redraw();
+	                //Update the position of the dot and WorldWind if changes were detected
+	                if (changed) {
+	                	dot.setPosition(Position.fromDegrees(latitude, longitude, altitude));
+	                	checkContact(dot, activeFilter);
+		                getWwd().redraw();
+	                }
 	            }
 	        });
+		}
+		
+		private void checkContact(PointPlacemark dot, List<SpaceObject> spaceObjects) {
+			
+			//Dot position
+			double dotLat = Math.toRadians(dot.getPosition().getLatitude().degrees); //latitude (rad)
+		    double dotLon = Math.toRadians(dot.getPosition().getLongitude().degrees); //longitude (rad)
+		    double dotAlt = dot.getPosition().getAltitude(); //altitude (m)
+		    //Convert dot's position to Cartesian coordinates
+		    double dotX = (Constants.WGS84_EARTH_EQUATORIAL_RADIUS + dotAlt) * Math.cos(dotLat) * Math.cos(dotLon); //x (m)
+		    double dotY = (Constants.WGS84_EARTH_EQUATORIAL_RADIUS + dotAlt) * Math.cos(dotLat) * Math.sin(dotLon); //y (m)
+		    double dotZ = (Constants.WGS84_EARTH_EQUATORIAL_RADIUS + dotAlt) * Math.sin(dotLat); //z (m)
+			
+			if(spaceObjects != null) {
+				for(SpaceObject obj : spaceObjects) {
+					
+					//Convert marker's position to Cartesian coordinates
+					double markerX = (Constants.WGS84_EARTH_EQUATORIAL_RADIUS + obj.getCurrentAlt()) * Math.cos(obj.getCurrentLat()) * Math.cos(obj.getCurrentLon());
+					double markerY = (Constants.WGS84_EARTH_EQUATORIAL_RADIUS + obj.getCurrentAlt()) * Math.cos(obj.getCurrentLat()) * Math.sin(obj.getCurrentLon());
+					double markerZ = (Constants.WGS84_EARTH_EQUATORIAL_RADIUS + obj.getCurrentAlt()) * Math.sin(obj.getCurrentLat());
+					
+				    //Compute the distance between dot and marker
+			        double distance = Math.sqrt(
+			            Math.pow(dotX - markerX, 2) +
+			            Math.pow(dotY - markerY, 2) +
+			            Math.pow(dotZ - markerZ, 2)
+			        );
+					
+					if(distance <= 100000) {
+						displayOrbit(obj);
+					}
+				}
+			}
+		}
+		
+		private void displayOrbit(SpaceObject obj) {
+			
+			final RenderableLayer orbitsLayer = new RenderableLayer(); //layer for all orbits
+			obj.getPath().setVisible(true);	
+			ShapeAttributes attrs = obj.getPath().getActiveAttributes();
+			attrs.setOutlineMaterial(new Material(obj.getColor()));
+			obj.getPath().setAttributes(attrs);
+			obj.getPath().getActiveAttributes().setOutlineMaterial(new Material(obj.getColor())); //change colour to be the same as marker
+			orbitsLayer.addRenderable(obj.getPath()); //render orbits in respective layer
+			layers.add(orbitsLayer); //add layer to worldwind
 		}
 		
 		/**
@@ -286,14 +353,6 @@ public static class AppFrame extends ApplicationTemplate.AppFrame {
 			
 			//Temporary - code to display orbits
 			//TODO Create button to toggle the orbits - similar process to combobox - do it outside of this function obviously
-			final RenderableLayer orbitsLayer = new RenderableLayer(); //layer for all orbits
-			orbitsLayer.setName("All orbits");
-			for(int k = 0; k < spaceObjects.size(); k++) {
-				
-				allObjects.get(k).getPath().setVisible(false);
-				orbitsLayer.addRenderable(spaceObjects.get(k).getPath()); //render orbits in respective layer
-			}
-			layers.add(orbitsLayer); //add layer to worldwind
 			
 			return markerLayer;
 		}

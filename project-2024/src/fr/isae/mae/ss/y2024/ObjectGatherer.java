@@ -183,9 +183,9 @@ public class ObjectGatherer {
 	 */
 	public static class SpaceObject {
 		
-		private String name; //name of space object
-		private String type; //type of space object (satellite, debris, etc..)
-		private Color cor; //marker color for WorldWind
+		private String name = ""; //name of space object
+		private String type = ""; //type of space object (satellite, debris, etc..)
+		private Color cor = Color.YELLOW; //marker color for WorldWind; yellow by default
 		private AbsoluteDate date; //epoch UTC time of the data sampling with accuracy to the second
 		
 		private KeplerianOrbit orbit; //Keplerian orbit
@@ -238,7 +238,7 @@ public class ObjectGatherer {
 			double T = orbit.getKeplerianPeriod(); //orbit period (s)
 			
 			//get patrius points; more points for more eccentric orbits
-			List<GeodeticPoint> patriusPoints = propagateOrbit(orbit, T,Math.round(T/(1+e/0.005)));
+			List<GeodeticPoint> patriusPoints = propagateOrbit(orbit,T,100);
 			path = new Path(glueBetweenPatriusAndWorldwind(patriusPoints)); //convert to world wind path
 			
 			//Initial positions
@@ -248,7 +248,7 @@ public class ObjectGatherer {
 
 			//Set path's attributes
 			ShapeAttributes attrs = new BasicShapeAttributes(); //initialise shape and attributes
-			attrs.setOutlineMaterial(new Material(Color.YELLOW)); //set colour
+			attrs.setOutlineMaterial(new Material(cor));
 			attrs.setOutlineWidth(0.5d); //set thickness
 			path.setAttributes(attrs);
 			path.setVisible(false); //starts not visible by default
